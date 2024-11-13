@@ -1,5 +1,5 @@
-import magic
 import filetype
+import math
 from typing import List, Dict
 import os
 import hashlib
@@ -64,10 +64,17 @@ class FileAnalyzer:
             return 0.0
         
         entropy = 0
-        for x in range(256):
-            p_x = data.count(x) / len(data)
-            if p_x > 0:
-                entropy += - p_x * math.log2(p_x)
+        size = len(data)
+        
+        # Count byte frequencies
+        byte_counts = {}
+        for byte in data:
+            byte_counts[byte] = byte_counts.get(byte, 0) + 1
+        
+        # Calculate entropy
+        for count in byte_counts.values():
+            p_x = count / size
+            entropy += -p_x * math.log2(p_x)
         
         return entropy
     
@@ -75,46 +82,59 @@ class FileAnalyzer:
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
         
-        # Get file type
-        kind = filetype.guess(file_path)
-        mime_type = kind.mime if kind else magic.from_file(file_path, mime=True)
-        
-        # Basic file info
-        file_size = os.path.getsize(file_path)
-        file_hashes = self.calculate_hashes(file_path)
-        entropy = self.check_file_entropy(file_path)
-        
-        # YARA rule matching
-        yara_matches = self.rule_engine.scan_file(file_path)
-        
-        threats = []
-        risk_level = "low"
-        
-        # Check file type risk
-        if mime_type in self.high_risk_types:
-            threats.append(f"High-risk file type detected: {mime_type}")
-            risk_level = "high"
-        
-        # Check file entropy (possible encryption/packing)
-        if entropy > 7.0:  # High entropy threshold
-            threats.append("High entropy detected: possible encryption or packing")
-            risk_level = "high"
-        
-        # Add YARA matches
-        for match in yara_matches:
-            threats.append(f"Pattern match: {match}")
-            if risk_level == "low":
-                risk_level = "medium"
-        
-        # Prepare detailed analysis results
-        return {
-            "mime_type": mime_type,
-            "file_size": file_size,
-            "hashes": file_hashes,
-            "entropy": entropy,
-            "threats": threats,
-            "is_malicious": len(threats) > 0,
-            "risk_level": risk_level,
-            "detection_time": os.path.getmtime(file_path),
-            "yara_matches": yara_matches
-        }
+        try:
+            # Get file type using filetype
+            kind = filetype.guess(file_path)
+            mime_type = kind.mime if kind else 'application/octet-stream'
+            
+            # Basic file info
+            file_size = os.path.getsize(file_path)
+            file_hashes = self.calculate_hashes(file_path)
+            entropy = self.check_file_entropy(file_path)
+            
+            # YARA rule matching
+            yara_matches = self.rule_engine.scan_file(file_path)
+            
+            threats = []
+            risk_level = "low"
+            
+            # Check file type risk
+            if mime_type in self.high_risk_types:
+                threats.append(f"High-risk file type detected: {mime_type}")
+                risk_level = "high"
+            
+            # Check file entropy (possible encryption/packing)
+            if entropy > 7.0:  # High entropy threshold
+                threats.append("High entropy detected: possible encryption or packing")
+                risk_level = "high"
+            
+            # Add YARA matches
+            for match in yara_matches:
+                threats.append(f"Pattern match: {match}")
+                if risk_level == "low":
+                    risk_level = "medium"
+            
+            # Prepare detailed analysis results
+            return {
+                "mime_type": mime_type,
+                "file_size": file_size,
+                "hashes": file_hashes,
+                "entropy": entropy,
+                "threats": threats,
+                "is_malicious": len(threats) > 0,
+                "risk_level": risk_level,
+                "detection_time": os.path.getmtime(file_path),
+                "yara_matches": yara_matches
+            }
+        except Exception as e:
+            return {
+                "mime_type": "unknown",
+                "file_size": os.path.getsize(file_path),
+                "hashes": self.calculate_hashes(file_path),
+                "entropy": 0.0,
+                "threats": [f"Error analyzing file: {str(e)}"],
+                "is_malicious": False,
+                "risk_level": "unknown",
+                "detection_time": os.path.getmtime(file_path),
+                "yara_matches": []
+            }

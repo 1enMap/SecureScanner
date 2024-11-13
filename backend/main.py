@@ -5,6 +5,7 @@ import os
 import uuid
 from scanner.file_analyzer import FileAnalyzer
 from scanner.db import ScanDatabase
+import uvicorn
 
 app = FastAPI()
 
@@ -68,5 +69,4 @@ async def get_scan_status(scan_id: str):
     return result
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
