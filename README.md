@@ -2,7 +2,8 @@
 
 SecureScanner is a modern, web-based file analysis tool that combines powerful threat detection capabilities with an intuitive user interface. It provides real-time file scanning and detailed security analysis to help identify potential threats and malicious content.
 
-![SecureScanner Demo](https://github.com/1enMap/SecureScanner/raw/main/docs/demo.gif)
+![SecureScanner Demo](./images/anti1.png)
+
 
 ## 🌟 Features
 
